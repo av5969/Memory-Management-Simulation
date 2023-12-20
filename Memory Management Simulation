@@ -1,0 +1,96 @@
+class MemoryBlock:
+    def __init__(self, start, size):
+        self.start = start
+        self.size = size
+        self.next_block = None
+
+class MemoryManager:
+    def __init__(self, total_size):
+        self.total_size = total_size
+        self.free_memory = MemoryBlock(0, total_size)
+        self.allocated_memory = None
+
+    def allocate_best_fit(self, size):
+        best_fit_block = None
+        prev_block = None
+        current_block = self.free_memory
+
+        while current_block:
+            if current_block.size >= size:
+                if best_fit_block is None or current_block.size < best_fit_block.size:
+                    best_fit_block = current_block
+                    best_prev_block = prev_block
+
+            prev_block = current_block
+            current_block = current_block.next_block
+
+        if best_fit_block:
+            self.allocate_memory(best_fit_block, best_prev_block, size)
+            print(f"Allocated {size} units of memory at address {best_fit_block.start}")
+        else:
+            print(f"Memory allocation failed. No suitable block found for size {size}")
+
+    def allocate_memory(self, block, prev_block, size):
+        new_block = MemoryBlock(block.start, size)
+        block.start += size
+        block.size -= size
+
+        if block.size == 0:
+            if prev_block:
+                prev_block.next_block = block.next_block
+            else:
+                self.free_memory = block.next_block
+
+        new_block.next_block = self.allocated_memory
+        self.allocated_memory = new_block
+
+    def deallocate_memory(self, address):
+        current_block = self.allocated_memory
+        prev_block = None
+
+        while current_block and current_block.start != address:
+            prev_block = current_block
+            current_block = current_block.next_block
+
+        if current_block:
+            self.merge_adjacent_free_blocks(current_block, prev_block)
+            print(f"Deallocated memory at address {address}")
+        else:
+            print(f"No allocated memory found at address {address}")
+
+    def merge_adjacent_free_blocks(self, block, prev_block):
+        if prev_block and prev_block.start + prev_block.size == block.start:
+            prev_block.size += block.size
+            prev_block.next_block = block.next_block
+        else:
+            new_free_block = MemoryBlock(block.start, block.size)
+            new_free_block.next_block = self.free_memory
+            self.free_memory = new_free_block
+
+    def print_memory_status(self):
+        print("\nMemory Status:")
+        print("Free Memory:")
+        self.print_memory_block(self.free_memory)
+        print("\nAllocated Memory:")
+        self.print_memory_block(self.allocated_memory)
+
+    def print_memory_block(self, block):
+        while block:
+            print(f"Address: {block.start}, Size: {block.size}")
+            block = block.next_block
+
+
+# Example Usage
+memory_manager = MemoryManager(total_size=1000)
+
+memory_manager.print_memory_status()
+
+memory_manager.allocate_best_fit(200)
+memory_manager.allocate_best_fit(100)
+memory_manager.allocate_best_fit(300)
+
+memory_manager.print_memory_status()
+
+memory_manager.deallocate_memory(200)
+
+memory_manager.print_memory_status()
